@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Hydra Story Maker</title>
+
+<!-- React + Babel (CDN) -->
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+<!-- Supabase JS -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+
+<!-- ReactFlow (via CDN) -->
+<script src="https://unpkg.com/@xyflow/react@12/dist/umd/index.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/@xyflow/react@12/dist/style.css" />
+
+<style>
+  :root {
+    --bg: #0d0b14;
+    --surface: #1a1528;
+    --surface2: #231d36;
+    --border: #2e2550;
+    --accent: #7c3aed;
+    --accent2: #a78bfa;
+    --text: #e2d9f3;
+    --text2: #9d8ec4;
+    --danger: #ef4444;
+    --success: #22c55e;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Inter', system-ui, sans-serif; height: 100vh; overflow: hidden; }
+  button { cursor: pointer; border: none; font-family: inherit; }
+  input, textarea, select { font-family: inherit; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--surface); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  /* Layout */
+  #root { height: 100vh; display: flex; flex-direction: column; }
+
+  /* Top Bar */
+  .topbar {
+    height: 48px; background: var(--surface); border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; padding: 0 16px; gap: 12px; flex-shrink: 0;
+  }
+  .topbar-logo { font-size: 16px; font-weight: 700; color: var(--accent2); margin-right: 8px; }
+  .tab-btn {
+    padding: 6px 14px; border-radius: 6px; font-size: 13px; font-weight: 500;
+    background: transparent; color: var(--text2); transition: all 0.15s;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .tab-btn:hover { background: var(--surface2); color: var(--text); }
+  .tab-btn.active { background: var(--accent); color: #fff; }
+  .tab-btn .close-x { opacity: 0.6; font-size: 11px; }
+  .tab-btn .close-x:hover { opacity: 1; color: var(--danger); }
+  .new-project-btn {
+    padding: 6px 10px; border-radius: 6px; background: var(--surface2); color: var(--text2);
+    font-size: 18px; line-height: 1; transition: all 0.15s;
+  }
+  .new-project-btn:hover { background: var(--accent); color: #fff; }
+  .topbar-right { margin-left: auto; display: flex; gap: 8px; }
+  .icon-btn {
+    padding: 6px 10px; border-radius: 6px; background: var(--surface2); color: var(--text2);
+    font-size: 13px; transition: all 0.15s;
+  }
+  .icon-btn:hover { background: var(--border); color: var(--text); }
+
+  /* Main area */
+  .main { flex: 1; display: flex; overflow: hidden; }
+
+  /* Sidebar */
+  .sidebar {
+    width: 240px; background: var(--surface); border-right: 1px solid var(--border);
+    display: flex; flex-direction: column; flex-shrink: 0;
+  }
+  .sidebar-section { padding: 12px; border-bottom: 1px solid var(--border); }
+  .sidebar-title {
+    font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em;
+    color: var(--text2); margin-bottom: 8px;
+  }
+  .add-btn {
+    width: 100%; padding: 7px 10px; border-radius: 6px; background: var(--accent);
+    color: #fff; font-size: 13px; font-weight: 500; transition: background 0.15s;
+    display: flex; align-items: center; gap: 6px; justify-content: center;
+  }
+  .add-btn:hover { background: #6d28d9; }
+  .sidebar-list { overflow-y: auto; flex: 1; }
+
+  /* Character card in sidebar */
+  .char-card {
+    padding: 8px 12px; display: flex; align-items: center; gap: 8px;
+    cursor: pointer; transition: background 0.1s; border-bottom: 1px solid var(--border);
+  }
+  .char-card:hover { background: var(--surface2); }
+  .char-card.active { background: var(--surface2); }
+  .char-avatar {
+    width: 28px; height: 28px; border-radius: 50%; background: var(--accent);
+    display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700;
+    flex-shrink: 0;
+  }
+  .char-name { font-size: 13px; font-weight: 500; }
+  .char-role { font-size: 11px; color: var(--text2); }
+
+  /* Canvas area */
+  .canvas-area { flex: 1; position: relative; background: var(--bg); }
+  .react-flow { background: var(--bg); }
+  .react-flow__background { background: var(--bg); }
+
+  /* Scene Node */
+  .scene-node {
+    background: var(--surface); border: 2px solid var(--border); border-radius: 10px;
+    min-width: 220px; max-width: 280px; box-shadow: 0 2px 16px rgba(0,0,0,0.4);
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .scene-node.selected { border-color: var(--accent2); box-shadow: 0 0 0 3px rgba(167,139,250,0.2); }
+  .scene-node-header {
+    padding: 10px 12px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .scene-node-icon { font-size: 16px; }
+  .scene-node-title { font-size: 13px; font-weight: 600; flex: 1; }
+  .scene-node-body { padding: 10px 12px; }
+  .scene-node-desc { font-size: 11px; color: var(--text2); line-height: 1.5; margin-bottom: 8px; }
+  .scene-chars { display: flex; gap: 4px; flex-wrap: wrap; }
+  .scene-char-tag {
+    padding: 2px 8px; border-radius: 20px; font-size: 10px; font-weight: 600;
+    background: rgba(124,58,237,0.3); color: var(--accent2); border: 1px solid rgba(124,58,237,0.5);
+  }
+
+  /* Conflict edge label */
+  .conflict-label {
+    background: var(--surface2); border: 1px solid var(--border); border-radius: 8px;
+    padding: 6px 10px; font-size: 11px; color: var(--text2); max-width: 160px; text-align: center;
+    cursor: pointer;
+  }
+  .conflict-label:hover { border-color: var(--accent); color: var(--text); }
+  .conflict-label.has-conflict { border-color: #7c3aed55; color: var(--accent2); }
+  .conflict-label.generating { color: var(--accent2); animation: pulse 1.2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+
+  /* Right panel */
+  .right-panel {
+    width: 300px; background: var(--surface); border-left: 1px solid var(--border);
+    display: flex; flex-direction: column; flex-shrink: 0; overflow-y: auto;
+  }
+  .panel-header {
+    padding: 14px 16px; border-bottom: 1px solid var(--border);
+    font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 8px;
+  }
+  .panel-body { padding: 16px; flex: 1; }
+  .form-group { margin-bottom: 14px; }
+  .form-label { font-size: 11px; font-weight: 600; color: var(--text2); margin-bottom: 5px; display: block; text-transform: uppercase; letter-spacing: 0.05em; }
+  .form-input {
+    width: 100%; padding: 8px 10px; border-radius: 6px; background: var(--bg);
+    border: 1px solid var(--border); color: var(--text); font-size: 13px; outline: none;
+    transition: border-color 0.15s;
+  }
+  .form-input:focus { border-color: var(--accent); }
+  .form-textarea { resize: vertical; min-height: 70px; line-height: 1.5; }
+  .save-btn {
+    width: 100%; padding: 8px; border-radius: 6px; background: var(--accent);
+    color: #fff; font-size: 13px; font-weight: 600; transition: background 0.15s; margin-top: 4px;
+  }
+  .save-btn:hover { background: #6d28d9; }
+  .delete-btn {
+    width: 100%; padding: 8px; border-radius: 6px; background: transparent;
+    border: 1px solid var(--danger); color: var(--danger); font-size: 13px; font-weight: 600;
+    transition: all 0.15s; margin-top: 8px;
+  }
+  .delete-btn:hover { background: var(--danger); color: #fff; }
+
+  /* Conflict options */
+  .conflict-option {
+    padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--bg); margin-bottom: 8px; cursor: pointer; transition: all 0.15s;
+  }
+  .conflict-option:hover { border-color: var(--accent); }
+  .conflict-option.selected { border-color: var(--accent2); background: rgba(124,58,237,0.15); }
+  .conflict-option-title { font-size: 12px; font-weight: 600; margin-bottom: 4px; color: var(--accent2); }
+  .conflict-option-desc { font-size: 11px; color: var(--text2); line-height: 1.5; }
+  .gen-btn {
+    width: 100%; padding: 8px; border-radius: 6px; background: var(--surface2);
+    border: 1px solid var(--accent); color: var(--accent2); font-size: 13px; font-weight: 600;
+    transition: all 0.15s; display: flex; align-items: center; gap: 6px; justify-content: center;
+  }
+  .gen-btn:hover:not(:disabled) { background: var(--accent); color: #fff; }
+  .gen-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* Settings modal */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 1000;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .modal {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+    padding: 24px; width: 420px; max-width: 90vw;
+  }
+  .modal-title { font-size: 16px; font-weight: 700; margin-bottom: 16px; }
+  .modal-footer { display: flex; gap: 8px; margin-top: 20px; justify-content: flex-end; }
+  .cancel-btn {
+    padding: 8px 16px; border-radius: 6px; background: var(--surface2);
+    color: var(--text); font-size: 13px; transition: background 0.15s;
+  }
+  .cancel-btn:hover { background: var(--border); }
+
+  /* Toast */
+  .toast {
+    position: fixed; bottom: 24px; right: 24px; z-index: 2000;
+    background: var(--surface2); border: 1px solid var(--border); border-radius: 8px;
+    padding: 12px 16px; font-size: 13px; max-width: 320px;
+    animation: slideIn 0.2s ease; box-shadow: 0 4px 24px rgba(0,0,0,0.5);
+  }
+  .toast.success { border-color: var(--success); color: var(--success); }
+  .toast.error { border-color: var(--danger); color: var(--danger); }
+  @keyframes slideIn { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+  /* Empty state */
+  .empty-state {
+    position: absolute; inset: 0; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 12px; color: var(--text2);
+    pointer-events: none;
+  }
+  .empty-icon { font-size: 48px; opacity: 0.3; }
+  .empty-text { font-size: 14px; opacity: 0.5; }
+  .empty-sub { font-size: 12px; opacity: 0.4; }
+
+  /* Loading */
+  .loading { display: flex; align-items: center; justify-content: center; height: 100vh; font-size: 14px; color: var(--text2); }
+
+  /* Character panel chars list */
+  .chars-grid { display: flex; flex-direction: column; gap: 0; overflow-y: auto; }
+
+  /* Conflict panel */
+  .connection-info { font-size: 12px; color: var(--text2); margin-bottom: 12px; }
+  .arrow { color: var(--accent2); }
+</style>
+</head>
+<body>
+<div id="root"><div class="loading">⚡ กำลังโหลด Hydra Story Maker...</div></div>
+
+<script type="text/babel">
+const { useState, useEffect, useCallback, useRef } = React;
+
+// ---- Supabase ----
+const SUPA_URL = 'https://aoguewnqozzigkhhduaf.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFvZ3Vld25xb3p6aWdraGhkdWFmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU0NzQyMTUsImV4cCI6MjA5MTA1MDIxNX0.unJwzxLzjgMANMAIofrEKnitCQ479-pQt8wfx-ntzEg';
+const supabase = window.supabase.createClient(SUPA_URL, SUPA_KEY);
+
+// ---- ReactFlow ----
+const {
+  ReactFlow, Background, Controls, MiniMap, Handle, Position,
+  useNodesState, useEdgesState, addEdge, MarkerType, getBezierPath, EdgeLabelRenderer,
+} = window.ReactFlow || {};
+
+// ---- Helpers ----
+function uuid() { return crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2); }
+function initials(name) { return name ? name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2) : '?'; }
+function avatarColor(name) {
+  const colors = ['#7c3aed','#2563eb','#059669','#d97706','#dc2626','#db2777','#0891b2'];
+  let h = 0; for (let c of (name||'')) h = (h*31 + c.charCodeAt(0)) & 0xffffffff;
+  return colors[Math.abs(h) % colors.length];
+}
+
+// ---- Scene Node Component ----
+function SceneNodeComp({ data, selected }) {
+  return (
+    <div className={`scene-node ${selected ? 'selected' : ''}`}>
+      <Handle type="target" position={Position.Top} style={{ background: 'var(--accent)', border: '2px solid var(--surface)' }} />
+      <div className="scene-node-header">
+        <span className="scene-node-icon">{data.emoji || '🎬'}</span>
+        <span className="scene-node-title">{data.title || 'ฉาก'}</span>
+      </div>
+      <div className="scene-node-body">
+        {data.description && <div className="scene-node-desc">{data.description.slice(0,100)}{data.description.length>100?'…':''}</div>}
+        {data.characters && data.characters.length > 0 && (
+          <div className="scene-chars">
+            {data.characters.map(c => <span key={c.id} className="scene-char-tag">{c.name}</span>)}
+          </div>
+        )}
+      </div>
+      <Handle type="source" position={Position.Bottom} style={{ background: 'var(--accent)', border: '2px solid var(--surface)' }} />
+    </div>
+  );
+}
+
+// ---- Conflict Edge Component ----
+function ConflictEdgeComp({ id, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, data, markerEnd }) {
+  const [edgePath, labelX, labelY] = getBezierPath({ sourceX, sourceY, sourcePosition, targetX, targetY, targetPosition });
+  const isGen = data?.isGenerating;
+  const hasConflict = data?.conflict;
+  const label = isGen ? '✨ กำลังสร้าง...' : (hasConflict ? (data.conflict.label || 'ความขัดแย้ง') : '+ เพิ่มความขัดแย้ง');
+  return (
+    <>
+      <path id={id} className="react-flow__edge-path" d={edgePath} markerEnd={markerEnd}
+        style={{ stroke: hasConflict ? '#7c3aed' : '#3d2f6e', strokeWidth: 2, strokeDasharray: hasConflict ? 'none' : '6,3' }} />
+      <EdgeLabelRenderer>
+        <div style={{ position:'absolute', transform:`translate(-50%,-50%) translate(${labelX}px,${labelY}px)`, pointerEvents:'all' }}>
+          <div
+            className={`conflict-label ${hasConflict?'has-conflict':''} ${isGen?'generating':''}`}
+            onClick={() => data?.onLabelClick && data.onLabelClich(id)}
+          >{label}</div>
+        </div>
+      </EdgeLabelRenderer>
+    </>
+  );
+}
+
+const nodeTypes = { scene: SceneNodeComp };
+const edgeTypes = { conflict: ConflictEdgeComp };
+
+// ============================================================
+// MAIN APP
+// ============================================================
+function App() {
+  const [loading, setLoading] = useState(true);
+  const [projects, setProjects] = useState([]);
+  const [activeProjectId, setActiveProjectId] = useState(null);
+  const [scenes, setScenes] = useState([]);
+  const [characters, setCharacters] = useState([]);
+  const [connections, setConnections] = useState([]);
+  const [conflicts, setConflicts] = useState([]);
+  const [nodes, setNodes, onNodesChange] = useNodesState([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  const [selectedNode, setSelectedNode] = useState(null);
+  const [selectedEdgeId, setSelectedEdgeId] = useState(null);
+  const [rightPanel, setRightPanel] = useState(null); // 'scene' | 'conflict' | 'char' | 'settings'
+  const [showSettings, setShowSettings] = useState(false);
+  const [aiEndpoint, setAiEndpoint] = useState(() => localStorage.getItem('hydra_ai_endpoint') || 'http://localhost:1234/v1');
+  const [aiModel, setAiModel] = useState(() => localStorage.getItem('hydra_ai_model') || 'local-model');
+  const [toast, setToast] = useState(null);
+  const [newProjectName, setNewProjectName] = useState('');
+  const [showNewProject, setShowNewProject] = useState(false);
+  const [generatingEdgeId, setGeneratingEdgeId] = useState(null);
+  const generatingRef = useRef(new Set());
+
+  // Panel edit states
+  const [editScene, setEditScene] = useState({});
+  const [editChar, setEditChar] = useState({});
+  const [conflictData, setConflictData] = useState(null);
+
+  // ---- Toast ----
+  const showToast = useCallback((msg, type='info') => {
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 3000);
+  }, []);
+
+  // ---- Load Projects ----
+  useEffect(() => {
+    (async () => {
+      const { data, error } = await supabase.from('projects').select('*').order('created_at');
+      if (error) { showToast('เชื่อมต่อ Supabase ไม่ได้: ' + error.message, 'error'); setLoading(false); return; }
+      setProjects(data || []);
+      if (data && data.length > 0) setActiveProjectId(data[0].id);
+      setLoading(false);
+    })();
+  }, []);
+
+  // ---- Load Project Data ----
+  useEffect(() => {
+    if (!activeProjectId) return;
+    (async () => {
+      const [s, ch, co, cf] = await Promise.all([
+        supabase.from('scenes').select('*').eq('project_id', activeProjectId).order('created_at'),
+        supabase.from('characters').select('*').eq('project_id', activeProjectId).order('created_at'),
+        supabase.from('connections').select('*').eq('project_id', activeProjectId).order('created_at'),
+        supabase.from('conflicts').select('*').eq('project_id', activeProjectId).order('created_at'),
+      ]);
+      setScenes(s.data || []);
+      setCharacters(ch.data || []);
+      setConnections(co.data || []);
+      setConflicts(cf.data || []);
+    })();
+  }, [activeProjectId]);
+
+  // ---- Build ReactFlow graph ----
+  useEffect(() => {
+    const conflictConnIds = new Set(conflicts.map(c => c.connection_id));
+
+    const newNodes = scenes.map((scene, i) => ({
+      id: scene.id,
+      type: 'scene',
+      position: { x: scene.position_x ?? (200 + (i % 4) * 280), y: scene.position_y ?? (100 + Math.floor(i/4) * 200) },
+      data: {
+        title: scene.title,
+        description: scene.description,
+        emoji: scene.emoji || '🎬',
+        characters: characters.filter(c => (scene.character_ids || []).includes(c.id)),
+      },
+    }));
+
+    const newEdges = connections.map(conn => {
+      const conflict = conflicts.find(c => c.connection_id === conn.id);
+      return {
+        id: conn.id,
+        source: conn.source_scene_id,
+        target: conn.target_scene_id,
+        type: 'conflict',
+        markerEnd: { type: MarkerType.ArrowClosed, color: '#7c3aed' },
+        data: {
+          conflict: conflict || null,
+          isGenerating: generatingEdgeId === conn.id,
+          onLabelClick: (edgeId) => handleEdgeClick(edgeId),
+        },
+      };
+    });
+
+    setNodes(newNodes);
+    setEdges(newEdges);
+  }, [scenes, characters, connections, conflicts, generatingEdgeId]);
+
+  // ---- Connect nodes -> create connection ----
+  const onConnect = useCallback(async (params) => {
+    const newConn = { id: uuid(), project_id: activeProjectId, source_scene_id: params.source, target_scene_id: params.target, label: '' };
+    const { error } = await supabase.from('connections').insert(newConn);
+    if (!error) setConnections(prev => [...prev, newConn]);
+    else showToast('บันทึก connection ไม่ได้', 'error');
+  }, [activeProjectId]);
+
+  // ---- Node drag end -> save position ----
+  const onNodeDragStop = useCallback(async (_, node) => {
+    await supabase.from('scenes').update({ position_x: node.position.x, position_y: node.position.y }).eq('id', node.id);
+    setScenes(prev => prev.map(s => s.id === node.id ? { ...s, position_x: node.position.x, position_y: node.position.y } : s));
+  }, []);
+
+  // ---- Click node -> open scene panel ----
+  const onNodeClick = useCallback((_, node) => {
+    const scene = scenes.find(s => s.id === node.id);
+    if (scene) {
+      setSelectedNode(node.id);
+      setSelectedEdgeId(null);
+      setEditScene({ ...scene });
+      setRightPanel('scene');
+    }
+  }, [scenes]);
+
+  // ---- Click edge label ----
+  const handleEdgeClick = useCallback((edgeId) => {
+    const conn = connections.find(c => c.id === edgeId);
+    const conflict = conflicts.find(c => c.connection_id === edgeId);
+    const src = scenes.find(s => s.id === conn?.source_scene_id);
+    const tgt = scenes.find(s => s.id === conn?.target_scene_id);
+    setSelectedEdgeId(edgeId);
+    setSelectedNode(null);
+    setConflictData({ conn, conflict, src, tgt });
+    setRightPanel('conflict');
+  }, [connections, conflicts, scenes]);
+
+  // ---- Add Scene ----
+  const handleAddScene = async () => {
+    if (!activeProjectId) { showToast('เลือก project ก่อนนะครับ', 'error'); return; }
+    const scene = {
+      id: uuid(), project_id: activeProjectId, title: 'ฉากใหม่',
+      description: '', emoji: '🎬', character_ids: [],
+      position_x: 100 + Math.random() * 400, position_y: 100 + Math.random() * 200,
+    };
+    const { error } = await supabase.from('scenes').insert(scene);
+    if (!error) { setScenes(prev => [...prev, scene]); showToast('เพิ่มฉากแล้ว ✓', 'success'); }
+    else showToast('บันทึกไม่ได้: ' + error.message, 'error');
+  };
+
+  // ---- Save Scene ----
+  const handleSaveScene = async () => {
+    const { id, title, description, emoji, character_ids } = editScene;
+    const { error } = await supabase.from('scenes').update({ title, description, emoji, character_ids }).eq('id', id);
+    if (!error) {
+      setScenes(prev => prev.map(s => s.id === id ? { ...s, title, description, emoji, character_ids } : s));
+      showToast('บันทึกแล้ว ✓', 'success');
+    } else showToast('บันทึกไม่ได้', 'error');
+  };
+
+  // ---- Delete Scene ----
+  const handleDeleteScene = async () => {
+    if (!editScene.id) return;
+    if (!confirm('ลบฉากนี้?')) return;
+    await supabase.from('connections').delete().or(`source_scene_id.eq.${editScene.id},target_scene_id.eq.${editScene.id}`);
+    const { error } = await supabase.from('scenes').delete().eq('id', editScene.id);
+    if (!error) {
+      setScenes(prev => prev.filter(s => s.id !== editScene.id));
+      setConnections(prev => prev.filter(c => c.source_scene_id !== editScene.id && c.target_scene_id !== editScene.id));
+      setRightPanel(null);
+      showToast('ลบฉากแล้ว', 'success');
+    }
+  };
+
+  // ---- Add Character ----
+  const handleAddChar = async () => {
+    if (!activeProjectId) { showToast('เลือก project ก่อน', 'error'); return; }
+    const char = { id: uuid(), project_id: activeProjectId, name: 'ตัวละครใหม่', role: '', description: '' };
+    const { error } = await supabase.from('characters').insert(char);
+    if (!error) {
+      setCharacters(prev => [...prev, char]);
+      setEditChar({ ...char });
+      setRightPanel('char');
+    } else showToast('บันทึกไม่ได้', 'error');
+  };
+
+  // ---- Save Character ----
+  const handleSaveChar = async () => {
+    const { id, name, role, description } = editChar;
+    const { error } = await supabase.from('characters').update({ name, role, description }).eq('id', id);
+    if (!error) {
+      setCharacters(prev => prev.map(c => c.id === id ? { ...c, name, role, description } : c));
+      showToast('บันทึกแล้ว ✓', 'success');
+    } else showToast('บันทึกไม่ได้', 'error');
+  };
+
+  // ---- Delete Character ----
+  const handleDeleteChar = async () => {
+    if (!editChar.id || !confirm('ลบตัวละครนี้?')) return;
+    await supabase.from('characters').delete().eq('id', editChar.id);
+    setCharacters(prev => prev.filter(c => c.id !== editChar.id));
+    setRightPanel(null);
+    showToast('ลบตัวละครแล้ว', 'success');
+  };
+
+  // ---- New Project ----
+  const handleNewProject = async () => {
+    if (!newProjectName.trim()) return;
+    const proj = { id: uuid(), name: newProjectName.trim() };
+    const { error } = await supabase.from('projects').insert(proj);
+    if (!error) {
+      setProjects(prev => [...prev, proj]);
+      setActiveProjectId(proj.id);
+      setScenes([]); setCharacters([]); setConnections([]); setConflicts([]);
+      setNewProjectName('');
+      setShowNewProject(false);
+      showToast('สร้าง project แล้ว ✓', 'success');
+    } else showToast('สร้างไม่ได้: ' + error.message, 'error');
+  };
+
+  // ---- AI Generate Conflict ----
+  const handleGenerateConflict = async () => {
+    if (!conflictData?.conn) return;
+    const { conn, src, tgt } = conflictData;
+    if (generatingRef.current.has(conn.id)) return;
+    generatingRef.current.add(conn.id);
+    setGeneratingEdgeId(conn.id);
+
+    const charList = characters.map(c => `${c.name} (${c.role||'ตัวละคร'})`).join(', ');
+    const prompt = `คุณเป็นนักเขียนบทภาษาไทย ช่วยสร้างความขัดแย้งในเรื่องราว
+ฉากต้นทาง: "${src?.title || ''}" - ${src?.description || ''}
+ฉากปลายทาง: "${tgt?.title || ''}" - ${tgt?.description || ''}
+ตัวละครในเรื่อง: ${charList || 'ไม่มี'}
+
+สร้าง 3 ตัวเลือกความขัดแย้ง ตอบเป็น JSON เท่านั้น ไม่ต้องมีข้อความอื่น:
+{"options":[{"title":"ชื่อ","description":"คำอธิบาย"},{"title":"ชื่อ","description":"คำอธิบาย"},{"title":"ชื่อ","description":"คำอธิบาย"}]}`;
+
+    try {
+      const res = await fetch(`${aiEndpoint}/chat/completions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model: aiModel, messages: [{ role: 'user', content: prompt }], temperature: 0.8, max_tokens: 800 }),
+      });
+      if (!res.ok) throw new Error('AI ตอบไม่ได้ (status ' + res.status + ')');
+      const json = await res.json();
+      const raw = json.choices?.[0]?.message?.content || '';
+      const match = raw.match(/\{[\s\S]*\}/);
+      if (!match) throw new Error('AI ตอบมาไม่ถูก format');
+      const parsed = JSON.parse(match[0]);
+      const options = parsed.options || [];
+
+      // Save conflict
+      const conflictId = uuid();
+      const conflictRec = { id: conflictId, project_id: activeProjectId, connection_id: conn.id, label: options[0]?.title || 'ความขัดแย้ง', options, selected_option: null };
+      const { error } = await supabase.from('conflicts').insert(conflictRec);
+      if (!error) {
+        setConflicts(prev => [...prev, conflictRec]);
+        setConflictData(prev => ({ ...prev, conflict: conflictRec }));
+        showToast('สร้างความขัดแย้งแล้ว ✓', 'success');
+      } else showToast('บันทึกไม่ได้: ' + error.message, 'error');
+    } catch(e) {
+      showToast('AI Error: ' + e.message, 'error');
+    } finally {
+      generatingRef.current.delete(conn.id);
+      setGeneratingEdgeId(null);
+    }
+  };
+
+  // ---- Select Conflict Option ----
+  const handleSelectOption = async (optIdx) => {
+    if (!conflictData?.conflict) return;
+    const { conflict } = conflictData;
+    const { error } = await supabase.from('conflicts').update({ selected_option: optIdx }).eq('id', conflict.id);
+    if (!error) {
+      setConflicts(prev => prev.map(c => c.id === conflict.id ? { ...c, selected_option: optIdx } : c));
+      setConflictData(prev => ({ ...prev, conflict: { ...prev.conflict, selected_option: optIdx } }));
+    }
+  };
+
+  // ---- Save Settings ----
+  const handleSaveSettings = () => {
+    localStorage.setItem('hydra_ai_endpoint', aiEndpoint);
+    localStorage.setItem('hydra_ai_model', aiModel);
+    setShowSettings(false);
+    showToast('บันทึก Settings แล้ว ✓', 'success');
+  };
+
+  const activeProject = projects.find(p => p.id === activeProjectId);
+
+  if (loading) return <div className="loading">⚡ กำลังโหลด...</div>;
+
+  return (
+    <div id="root" style={{ height:'100vh', display:'flex', flexDirection:'column' }}>
+      {/* TOP BAR */}
+      <div className="topbar">
+        <span className="topbar-logo">⚡ Hydra</span>
+        {projects.map(p => (
+          <button key={p.id} className={`tab-btn ${p.id === activeProjectId ? 'active' : ''}`}
+            onClick={() => { setActiveProjectId(p.id); setRightPanel(null); setSelectedNode(null); setSelectedEdgeId(null); }}>
+            {p.name}
+          </button>
+        ))}
+        <button className="new-project-btn" onClick={() => setShowNewProject(true)} title="Project ใหม่">+</button>
+        <div className="topbar-right">
+          <button className="icon-btn" onClick={() => setShowSettings(true)}>⚙️ Settings</button>
+        </div>
+      </div>
+
+      {/* MAIN */}
+      <div className="main">
+        {/* SIDEBAR */}
+        <div className="sidebar">
+          <div className="sidebar-section">
+            <div className="sidebar-title">ฉากทั้งหมด</div>
+            <button className="add-btn" onClick={handleAddScene}>+ เพิ่มฉาก</button>
+          </div>
+          <div className="sidebar-section">
+            <div className="sidebar-title">ตัวละคร</div>
+            <button className="add-btn" onClick={handleAddChar}>+ เพิ่มตัวละคร</button>
+          </div>
+          <div className="chars-grid sidebar-list">
+            {characters.map(c => (
+              <div key={c.id} className={`char-card ${rightPanel==='char' && editChar.id===c.id ? 'active' : ''}`}
+                onClick={() => { setEditChar({ ...c }); setRightPanel('char'); setSelectedNode(null); }}>
+                <div className="char-avatar" style={{ background: avatarColor(c.name) }}>{initials(c.name)}</div>
+                <div><div className="char-name">{c.name}</div><div className="char-role">{c.role || 'ไม่ระบุบทบาท'}</div></div>
+              </div>
+            ))}
+            {characters.length === 0 && <div style={{ padding: '12px', fontSize: '12px', color: 'var(--text2)' }}>ยังไม่มีตัวละคร</div>}
+          </div>
+        </div>
+
+        {/* CANVAS */}
+        <div className="canvas-area">
+          {!activeProjectId ? (
+            <div className="empty-state">
+              <div className="empty-icon">📖</div>
+              <div className="empty-text">สร้าง Project ใหม่ก่อนเลยครับ</div>
+              <div className="empty-sub">กดปุ่ม + ด้านบน</div>
+            </div>
+          ) : (
+            <ReactFlow
+              nodes={nodes}
+              edges={edges}
+              onNodesChange={onNodesChange}
+              onEdgesChange={onEdgesChange}
+              onConnect={onConnect}
+              onNodeClick={onNodeClick}
+              onNodeDragStop={onNodeDragStop}
+              onPaneClick={() => { setSelectedNode(null); setSelectedEdgeId(null); setRightPanel(null); }}
+              nodeTypes={nodeTypes}
+              edgeTypes={edgeTypes}
+              fitView
+              deleteKeyCode="Delete"
+            >
+              <Background color="#2e2550" gap={24} size={1.5} />
+              <Controls style={{ background: 'var(--surface)', border: '1px solid var(--border)' }} />
+              <MiniMap style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
+                nodeColor={() => 'var(--accent)'} maskColor="rgba(13,11,20,0.7)" />
+            </ReactFlow>
+          )}
+        </div>
+
+        {/* RIGHT PANEL */}
+        {rightPanel && (
+          <div className="right-panel">
+            {/* SCENE PANEL */}
+            {rightPanel === 'scene' && editScene && (
+              <>
+                <div className="panel-header">🎬 แก้ไขฉาก</div>
+                <div className="panel-body">
+                  <div className="form-group">
+                    <label className="form-label">Emoji</label>
+                    <input className="form-input" value={editScene.emoji||'🎬'} onChange={e=>setEditScene(s=>({...s,emoji:e.target.value}))} style={{width:80}} />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">ชื่อฉาก</label>
+                    <input className="form-input" value={editScene.title||''} onChange={e=>setEditScene(s=>({...s,title:e.target.value}))} placeholder="ชื่อฉาก..." />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">คำอธิบาย</label>
+                    <textarea className="form-input form-textarea" value={editScene.description||''} onChange={e=>setEditScene(s=>({...s,description:e.target.value}))} placeholder="เล่าเรื่องฉากนี้..." />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">ตัวละครในฉาก</label>
+                    {characters.map(c => (
+                      <label key={c.id} style={{ display:'flex', alignItems:'center', gap:8, marginBottom:6, cursor:'pointer' }}>
+                        <input type="checkbox"
+                          checked={(editScene.character_ids||[]).includes(c.id)}
+                          onChange={e => {
+                            const ids = editScene.character_ids || [];
+                            setEditScene(s => ({...s, character_ids: e.target.checked ? [...ids, c.id] : ids.filter(x=>x!==c.id)}));
+                          }} />
+                        <div className="char-avatar" style={{ background: avatarColor(c.name), width:20, height:20, fontSize:10 }}>{initials(c.name)}</div>
+                        <span style={{fontSize:13}}>{c.name}</span>
+                      </label>
+                    ))}
+                    {characters.length === 0 && <div style={{fontSize:11,color:'var(--text2)'}}>ยังไม่มีตัวละคร</div>}
+                  </div>
+                  <button className="save-btn" onClick={handleSaveScene}>💾 บันทึก</button>
+                  <button className="delete-btn" onClick={handleDeleteScene}>🗑 ลบฉาก</button>
+                </div>
+              </>
+            )}
+
+            {/* CHAR PANEL */}
+            {rightPanel === 'char' && editChar && (
+              <>
+                <div className="panel-header">
+                  <div className="char-avatar" style={{ background: avatarColor(editChar.name), width:28, height:28 }}>{initials(editChar.name)}</div>
+                  แก้ไขตัวละคร
+                </div>
+                <div className="panel-body">
+                  <div className="form-group">
+                    <label className="form-label">ชื่อ</label>
+                    <input className="form-input" value={editChar.name||''} onChange={e=>setEditChar(c=>({...c,name:e.target.value}))} placeholder="ชื่อตัวละคร..." />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">บทบาท</label>
+                    <input className="form-input" value={editChar.role||''} onChange={e=>setEditChar(c=>({...c,role:e.target.value}))} placeholder="เช่น นักสืบ, วายร้าย..." />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">ลักษณะนิสัย</label>
+                    <textarea className="form-input form-textarea" value={editChar.description||''} onChange={e=>setEditChar(c=>({...c,description:e.target.value}))} placeholder="บุคลิก, ประวัติ, แรงจูงใจ..." />
+                  </div>
+                  <button className="save-btn" onClick={handleSaveChar}>💾 บันทึก</button>
+                  <button className="delete-btn" onClick={handleDeleteChar}>🗑 ลบตัวละคร</button>
+                </div>
+              </>
+            )}
+
+            {/* CONFLICT PANEL */}
+            {rightPanel === 'conflict' && conflictData && (
+              <>
+                <div className="panel-header">⚡ ความขัดแย้ง</div>
+                <div className="panel-body">
+                  <div className="connection-info">
+                    <span>{conflictData.src?.title || '?'}</span>
+                    <span className="arrow"> → </span>
+                    <span>{conflictData.tgt?.title || '?'}</span>
+                  </div>
+                  {!conflictData.conflict ? (
+                    <>
+                      <p style={{fontSize:12,color:'var(--text2)',marginBottom:12}}>ยังไม่มีความขัดแย้ง กด Generate เพื่อให้ AI สร้างให้</p>
+                      <button className="gen-btn" onClick={handleGenerateConflict} disabled={!!generatingEdgeId}>
+                        {generatingEdgeId ? '✨ กำลังสร้าง...' : '✨ Generate ความขัดแย้ง'}
+                      </button>
+                      <p style={{fontSize:11,color:'var(--text2)',marginTop:8}}>ต้องเปิด LM Studio หรือ AI endpoint ก่อน ตั้งค่าได้ใน ⚙️ Settings</p>
+                    </>
+                  ) : (
+                    <>
+                      <div style={{marginBottom:10,fontSize:12,color:'var(--text2)'}}>เลือก option ที่ต้องการ:</div>
+                      {(conflictData.conflict.options || []).map((opt, i) => (
+                        <div key={i} className={`conflict-option ${conflictData.conflict.selected_option === i ? 'selected' : ''}`}
+                          onClick={() => handleSelectOption(i)}>
+                          <div className="conflict-option-title">{opt.title}</div>
+                          <div className="conflict-option-desc">{opt.description}</div>
+                        </div>
+                      ))}
+                      <button className="gen-btn" style={{marginTop:8}} onClick={async () => {
+                        // Delete existing and regenerate
+                        await supabase.from('conflicts').delete().eq('id', conflictData.conflict.id);
+                        setConflicts(prev => prev.filter(c => c.id !== conflictData.conflict.id));
+                        setConflictData(prev => ({ ...prev, conflict: null }));
+                        setTimeout(handleGenerateConflict, 100);
+                      }} disabled={!!generatingEdgeId}>🔄 Generate ใหม่</button>
+                    </>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* NEW PROJECT MODAL */}
+      {showNewProject && (
+        <div className="modal-overlay" onClick={() => setShowNewProject(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-title">📖 สร้าง Project ใหม่</div>
+            <div className="form-group">
+              <label className="form-label">ชื่อ Project</label>
+              <input className="form-input" value={newProjectName} onChange={e=>setNewProjectName(e.target.value)}
+                placeholder="ชื่อเรื่อง..." autoFocus onKeyDown={e=>e.key==='Enter'&&handleNewProject()} />
+            </div>
+            <div className="modal-footer">
+              <button className="cancel-btn" onClick={() => setShowNewProject(false)}>ยกเลิก</button>
+              <button className="save-btn" style={{width:'auto',padding:'8px 20px'}} onClick={handleNewProject}>สร้าง</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* SETTINGS MODAL */}
+      {showSettings && (
+        <div className="modal-overlay" onClick={() => setShowSettings(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-title">⚙️ Settings</div>
+            <div className="form-group">
+              <label className="form-label">AI Endpoint (LM Studio)</label>
+              <input className="form-input" value={aiEndpoint} onChange={e=>setAiEndpoint(e.target.value)} placeholder="http://localhost:1234/v1" />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Model Name</label>
+              <input className="form-input" value={aiModel} onChange={e=>setAiModel(e.target.value)} placeholder="local-model" />
+            </div>
+            <p style={{fontSize:11,color:'var(--text2)',marginTop:-8}}>เปิด LM Studio → Local Server แล้วตั้ง endpoint ตรงนี้</p>
+            <div className="modal-footer">
+              <button className="cancel-btn" onClick={() => setShowSettings(false)}>ยกเลิก</button>
+              <button className="save-btn" style={{width:'auto',padding:'8px 20px'}} onClick={handleSaveSettings}>บันทึก</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TOAST */}
+      {toast && <div className={`toast ${toast.type}`}>{toast.msg}</div>}
+    </div>
+  );
+}
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);
+</script>
+</body>
+</html>
