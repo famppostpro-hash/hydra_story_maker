@@ -153,7 +153,7 @@ export default function App() {
         connectionId: conn.id,
         label: conn.label,
         hasConflict: conflictConnIds.has(conn.id),
-        isGener!ting: generatingEdgeId === conn.id,
+        isGenerating: generatingEdgeId === conn.id,
         onGenerate: handleGenerateConflict,
       },
     }))
@@ -328,7 +328,7 @@ export default function App() {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: 'var(--bg)' }}>
         <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: 40, marginBottom: 16 }}>🐉</div>
+          <div style={{ fontSize: 40, marginBottom: 16 }}>ð</div>
           <div style={{ color: 'var(--accent)', fontSize: 14 }}>Loading Hydra Story Maker...</div>
         </div>
       </div>
@@ -337,13 +337,13 @@ export default function App() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: 'var(--bg)' }}>
-      {/* ── Top Bar ── */}
+      {/* ââ Top Bar ââ */}
       <div style={{
         height: 52, background: 'var(--surface)', borderBottom: '1px solid var(--border)',
         display: 'flex', alignItems: 'center', padding: '0 16px', gap: 12, flexShrink: 0, zIndex: 10,
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginRight: 8 }}>
-          <span style={{ fontSize: 20 }}>🐉</span>
+          <span style={{ fontSize: 20 }}>ð</span>
           <span style={{ fontWeight: 800, fontSize: 15, color: 'var(--text)' }}>Hydra</span>
           <span style={{ fontSize: 11, color: 'var(--muted)', marginLeft: -4 }}>Story Maker</span>
         </div>
@@ -400,12 +400,12 @@ export default function App() {
             }}
             title="Toggle side panel"
           >
-            {showSide ? '⇥' : '⇤'}
+            {showSide ? 'â¥' : 'â¤'}
           </button>
         </div>
       </div>
 
-      {/* ── Main Content ── */}
+      {/* ââ Main Content ââ */}
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
         {/* Canvas */}
         <div style={{ flex: 1, position: 'relative' }}>
@@ -433,14 +433,14 @@ export default function App() {
                   border: '1px solid var(--border)', borderRadius: 8,
                   padding: '6px 12px', fontSize: 11, color: 'var(--muted)',
                 }}>
-                  {scenes.length} scenes · {connections.length} connections · {conflicts.length} conflicts
+                  {scenes.length} scenes Â· {connections.length} connections Â· {conflicts.length} conflicts
                 </div>
               </Panel>
             </ReactFlow>
           ) : (
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
               <div style={{ textAlign: 'center', maxWidth: 400 }}>
-                <div style={{ fontSize: 60, marginBottom: 20 }}>🐉</div>
+                <div style={{ fontSize: 60, marginBottom: 20 }}>ð</div>
                 <h1 style={{ fontSize: 28, fontWeight: 800, margin: '0 0 8px', background: 'linear-gradient(135deg, var(--accent), var(--accent2))', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
                   Hydra Story Maker
                 </h1>
@@ -482,7 +482,7 @@ export default function App() {
                     textTransform: 'capitalize',
                   }}
                 >
-                  {tab === 'characters' ? '👤 Characters' : '⚙️ Settings'}
+                  {tab === 'characters' ? 'ð¤ Characters' : 'âï¸ Settings'}
                 </button>
               ))}
             </div>
@@ -508,7 +508,7 @@ export default function App() {
         )}
       </div>
 
-      {/* ── Scene Editor Modal ── */}
+      {/* ââ Scene Editor Modal ââ */}
       {editingScene && (
         <SceneEditor
           scene={editingScene}
@@ -519,14 +519,14 @@ export default function App() {
         />
       )}
 
-      {/* ── New Project Modal ── */}
+      {/* ââ New Project Modal ââ */}
       {showNewProject && (
         <div
           style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
           onClick={e => { if (e.target === e.currentTarget) setShowNewProject(false) }}
         >
           <div className="fade-in" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, padding: 28, width: 380, boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}>
-            <h2 style={{ margin: '0 0 20px', fontSize: 17, fontWeight: 700 }}>🐉 New Story Project</h2>
+            <h2 style={{ margin: '0 0 20px', fontSize: 17, fontWeight: 700 }}>ð New Story Project</h2>
             <input
               value={newProjectName}
               onChange={e => setNewProjectName(e.target.value)}
