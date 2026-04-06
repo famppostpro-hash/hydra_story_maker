@@ -13,9 +13,9 @@
 <!-- Supabase JS -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 
-<!-- ReactFlow (via CDN) -->
-<script src="https://unpkg.com/@xyflow/react@12/dist/umd/index.js"></script>
-<link rel="stylesheet" href="https://unpkg.com/@xyflow/react@12/dist/style.css" />
+<!-- ReactFlow v11 (compatible with React 18 UMD) -->
+<script src="https://unpkg.com/reactflow@11/dist/umd/index.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/reactflow@11/dist/style.css" />
 
 <style>
   :root {
@@ -251,11 +251,13 @@ const SUPA_URL = 'https://aoguewnqozzigkhhduaf.supabase.co';
 const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFvZ3Vld25xb3p6aWdraGhkdWFmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU0NzQyMTUsImV4cCI6MjA5MTA1MDIxNX0.unJwzxLzjgMANMAIofrEKnitCQ479-pQt8wfx-ntzEg';
 const supabase = window.supabase.createClient(SUPA_URL, SUPA_KEY);
 
-// ---- ReactFlow ----
-const {
-  ReactFlow, Background, Controls, MiniMap, Handle, Position,
+// ---- ReactFlow v11 ----
+const RF = window.ReactFlow || {};
+const ReactFlow = RF.default || RF.ReactFlow || RF;
+const { Background, Controls, MiniMap, Handle, Position,
   useNodesState, useEdgesState, addEdge, MarkerType, getBezierPath, EdgeLabelRenderer,
-} = window.ReactFlow || {};
+  BaseEdge,
+} = RF;
 
 // ---- Helpers ----
 function uuid() { return crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2); }
@@ -302,7 +304,7 @@ function ConflictEdgeComp({ id, sourceX, sourceY, targetX, targetY, sourcePositi
         <div style={{ position:'absolute', transform:`translate(-50%,-50%) translate(${labelX}px,${labelY}px)`, pointerEvents:'all' }}>
           <div
             className={`conflict-label ${hasConflict?'has-conflict':''} ${isGen?'generating':''}`}
-            onClick={() => data?.onLabelClick && data.onLabelClich(id)}
+            onClick={() => data?.onLabelClick && data.onLabelClick(id)}
           >{label}</div>
         </div>
       </EdgeLabelRenderer>
